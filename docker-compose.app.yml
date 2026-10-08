@@ -27,6 +27,9 @@ services:
       HOSTNAME: "0.0.0.0"
     expose:
       - "3000"
+    ports:
+      # Host crontab hits localhost:3000; bound to loopback only (never public)
+      - "127.0.0.1:3000:3000"
     networks:
       - iv
     healthcheck:
