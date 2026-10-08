@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-const p = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } } });
+const p = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 
 // Nov 3, 2026 — U.S. general / midterm election day. Every state has a
 // federal general election (US House) and many have Senate, gubernatorial,

@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-const p = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } } });
+const p = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 
 // Snapshot of U.S. governors as of April 2026.
 // VERIFY = governors that took office after Nov 2025 election or via succession.
