@@ -14,7 +14,7 @@ knowyourgov.us {
 	encode zstd gzip
 	tls {
 		dns cloudflare {env.CF_API_TOKEN}
-		resolvers 1.1.1.1 1.0.0.1
+		propagation_timeout -1
 	}
 	reverse_proxy app:3000
 }
@@ -24,7 +24,7 @@ www.knowyourgov.us {
 	encode zstd gzip
 	tls {
 		dns cloudflare {env.CF_API_TOKEN}
-		resolvers 1.1.1.1 1.0.0.1
+		propagation_timeout -1
 	}
 	redir https://knowyourgov.us{uri} permanent
 }
@@ -34,7 +34,7 @@ analytics.knowyourgov.us {
 	encode zstd gzip
 	tls {
 		dns cloudflare {env.CF_API_TOKEN}
-		resolvers 1.1.1.1 1.0.0.1
+		propagation_timeout -1
 	}
 	reverse_proxy umami:3000
 }
