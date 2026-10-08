@@ -6,6 +6,7 @@
 
 {
 	email admin@knowyourgov.us
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
 }
 
 # ── Main site ───────────────────────────────────────────────────────────────
