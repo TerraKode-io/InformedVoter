@@ -284,6 +284,7 @@ All cron routes live in `src/app/api/cron/<job>/route.ts`.
 | `sync-elections` | Weekly (Mon 10:00 AM) | Google Civic |
 | `sync-voter-info` | Monthly (1st, 11:00 AM) | State sources |
 | `sync-pac-contributions` | Weekly (Wed 10:00 AM) | FEC |
+| `sync-social` | Weekly (Fri 10:30 AM) | unitedstates/congress-legislators (no key) |
 | `sync-local-meetings` | Daily 4:00 AM | Legistar / Granicus |
 | `send-digest` | Daily 3:00 PM | Resend email |
 

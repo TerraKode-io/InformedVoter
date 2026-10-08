@@ -2,7 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ChevronRight, User, Bot, Phone, Globe } from "lucide-react";
+import {
+  ChevronRight,
+  User,
+  Bot,
+  Phone,
+  Globe,
+  Twitter,
+  Facebook,
+  Instagram,
+  Youtube,
+} from "lucide-react";
 import PartyBadge from "@/components/ui/PartyBadge";
 import CandidateTabs from "@/components/features/CandidateTabs";
 import { prisma } from "@/lib/db";
@@ -199,6 +209,50 @@ export default async function CandidatePage({
                     className="inline-flex items-center gap-1.5 text-xs text-white/70 hover:text-white ring-1 ring-white/20 px-3 py-1.5 rounded-full transition-colors"
                   >
                     <Phone size={12} /> {contactInfo.phone}
+                  </a>
+                )}
+                {socialMedia.twitter && (
+                  <a
+                    href={socialMedia.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${candidate.name} on X (Twitter)`}
+                    className="text-white/70 hover:text-white transition-colors"
+                  >
+                    <Twitter size={16} />
+                  </a>
+                )}
+                {socialMedia.facebook && (
+                  <a
+                    href={socialMedia.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${candidate.name} on Facebook`}
+                    className="text-white/70 hover:text-white transition-colors"
+                  >
+                    <Facebook size={16} />
+                  </a>
+                )}
+                {socialMedia.instagram && (
+                  <a
+                    href={socialMedia.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${candidate.name} on Instagram`}
+                    className="text-white/70 hover:text-white transition-colors"
+                  >
+                    <Instagram size={16} />
+                  </a>
+                )}
+                {socialMedia.youtube && (
+                  <a
+                    href={socialMedia.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${candidate.name} on YouTube`}
+                    className="text-white/70 hover:text-white transition-colors"
+                  >
+                    <Youtube size={16} />
                   </a>
                 )}
               </div>

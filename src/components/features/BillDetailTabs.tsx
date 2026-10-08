@@ -131,20 +131,22 @@ export default function BillDetailTabs({ bill }: BillDetailTabsProps) {
             transition={{ duration: 0.2 }}
             className="space-y-6"
           >
-            {/* AI Summary */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Plain-English Summary (AI-assisted)
-              </h2>
-              <p className="text-gray-700 leading-relaxed">{bill.aiSummary}</p>
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {bill.subjects.map((s) => (
-                  <span key={s} className="text-xs bg-[#1B2A4A]/8 text-[#1B2A4A]/80 px-2.5 py-1 rounded-full font-medium">
-                    {s}
-                  </span>
-                ))}
+            {/* AI Summary — hidden until an analysis exists */}
+            {bill.aiSummary && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  Plain-English Summary (AI-assisted)
+                </h2>
+                <p className="text-gray-700 leading-relaxed">{bill.aiSummary}</p>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {bill.subjects.map((s) => (
+                    <span key={s} className="text-xs bg-[#1B2A4A]/8 text-[#1B2A4A]/80 px-2.5 py-1 rounded-full font-medium">
+                      {s}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Status timeline */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">

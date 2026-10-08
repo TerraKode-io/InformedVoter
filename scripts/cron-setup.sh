@@ -46,6 +46,7 @@ $(job '0 8 * * *'  '/api/cron/sync-votes')
 # ── Weekly data sync jobs ──
 $(job '0 9 * * 1'  '/api/cron/sync-campaign-finance')
 $(job '0 10 * * 1' '/api/cron/sync-elections')
+$(job '30 10 * * 5' '/api/cron/sync-social')
 $(job '0 10 * * 3' '/api/cron/sync-pac-contributions')
 
 # ── Monthly data sync job (1st of month) ──
