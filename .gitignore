@@ -80,3 +80,6 @@ secrets/
 # Deprecated files (old VPS config, IDE artifacts, etc.)
 .deprecated/
 
+# TLS certs / keys (Cloudflare Origin CA — provisioned on the server, never committed)
+docker/certs/
+
