@@ -29,7 +29,7 @@ The stack is **Next.js 16 + TypeScript** (App Router, Turbopack), **Tailwind CSS
 | State Management | TanStack Query | React Query v5 for server-state caching |
 | Icons | Lucide React | |
 | Animations | Framer Motion | |
-| Hosting | Self-hosted Proxmox | 2 VMs (`iv-app` + `iv-data`), Docker Compose, Caddy (DNS-01 TLS), host crontab |
+| Hosting | Self-hosted Proxmox | 2 VMs (`iv-app` + `iv-data`), Docker Compose, Caddy (Cloudflare Origin CA TLS), host crontab |
 | Analytics | Umami (self-hosted) | Container on `iv-app`; script injected in `layout.tsx` |
 
 ---

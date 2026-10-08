@@ -38,8 +38,11 @@ Cloudflare edge ──► 50.184.245.19:80/443
 
 - The app VM is the **only** public server. PostgreSQL and Redis are VPC-only and
   never on a routed/public segment.
-- TLS at the origin is Let's Encrypt **DNS-01** (Caddy + `caddy-dns/cloudflare`),
-  required because the origin is only reachable through Cloudflare.
+- TLS at the origin is a **Cloudflare Origin CA certificate** (15-year), mounted
+  at `docker/certs/` and terminated by Caddy. Cloudflare SSL mode is
+  **Full (strict)**. (Let's Encrypt DNS-01 was attempted but the ACME
+  propagation self-check is unreliable against the internal resolver, so the
+  Origin CA cert is used instead. No ACME is in play.)
 
 ---
 
@@ -127,6 +130,9 @@ node prisma/seed-elections.mjs
 cd /opt/informedvoter
 git clone <repo> .            # or git pull
 cp .env.example .env          # fill in secrets
+mkdir -p docker/certs         # place Cloudflare Origin CA cert/key here:
+#   docker/certs/knowyourgov.pem  (certificate)
+#   docker/certs/knowyourgov.key  (private key, chmod 600)
 docker compose -f docker-compose.app.yml up -d --build
 
 # Install the 13 cron jobs:
@@ -136,10 +142,27 @@ sudo CRON_SECRET="<secret>" APP_URL="http://localhost:3000" ./scripts/cron-setup
 `.env` key values:
 - `DATABASE_URL=postgresql://informedvoter:<DB_PASSWORD>@10.39.112.20:5432/informedvoter?schema=public`
 - `REDIS_URL=redis://:<REDIS_PASSWORD>@10.39.112.20:6379`
-- `CF_API_TOKEN=<Cloudflare DNS token>` (Caddy TLS)
 - `UMAMI_DATABASE_URL=...5432/umami`, `UMAMI_APP_SECRET=<random>`
 - `NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.knowyourgov.us/script.js`,
   `NEXT_PUBLIC_UMAMI_WEBSITE_ID=<from Umami>`
+- `CF_API_TOKEN` is **not** required for TLS (Origin CA cert is used); keep blank
+  unless you need Cloudflare API access from the app.
+
+### TLS (Cloudflare Origin CA)
+
+Generate a key + CSR and request the cert (valid 15 years):
+
+```bash
+openssl req -new -newkey rsa:2048 -nodes -keyout knowyourgov.key -out knowyourgov.csr \
+  -subj "/CN=knowyourgov.us" \
+  -addext "subjectAltName=DNS:knowyourgov.us,DNS:*.knowyourgov.us"
+# POST knowyourgov.csr to https://api.cloudflare.com/client/v4/certificates with
+# the SSL-scoped token: {"csr":...,"hostnames":["knowyourgov.us","*.knowyourgov.us"],
+# "requested_validity":5475,"request_type":"origin-rsa"} → result.certificate
+```
+
+Place the returned certificate + key in `docker/certs/` and set the Cloudflare
+zone SSL mode to **Full (strict)**.
 
 ### Umami database
 
