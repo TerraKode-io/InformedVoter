@@ -28,10 +28,10 @@ const securityHeaders = [
       // NOTE: 'unsafe-inline' and 'unsafe-eval' are required for Next.js 16 runtime
       // (styled-jsx, fast refresh, etc.). Removing them will break the app.
       // For a stricter policy, implement CSP nonces via middleware.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.knowyourgov.us",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://theunitedstates.io https://bioguide.congress.gov https://*.oyez.org",
-      "connect-src 'self' https://api.bigdatacloud.net https://ipapi.co https://api.usaspending.gov",
+      "connect-src 'self' https://api.bigdatacloud.net https://ipapi.co https://api.usaspending.gov https://analytics.knowyourgov.us",
       "font-src 'self'",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -41,6 +41,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  output: "standalone",
   productionBrowserSourceMaps: false,
   async headers() {
     return [

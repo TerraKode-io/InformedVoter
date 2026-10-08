@@ -1,0 +1,36 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# InformedVoter — Caddyfile
+# TLS via Let's Encrypt DNS-01 (Cloudflare), because the origin is only
+# reachable through Cloudflare (Full strict).
+# ═══════════════════════════════════════════════════════════════════════════
+
+{
+	email admin@knowyourgov.us
+}
+
+# ── Main site ───────────────────────────────────────────────────────────────
+knowyourgov.us {
+	encode zstd gzip
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+	reverse_proxy app:3000
+}
+
+# ── www → apex ──────────────────────────────────────────────────────────────
+www.knowyourgov.us {
+	encode zstd gzip
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+	redir https://knowyourgov.us{uri} permanent
+}
+
+# ── Umami analytics ─────────────────────────────────────────────────────────
+analytics.knowyourgov.us {
+	encode zstd gzip
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+	reverse_proxy umami:3000
+}

@@ -15,7 +15,6 @@ const WINDOW_SEC      = 60;
 function getClientIP(request: NextRequest): string {
   return (
     request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-vercel-forwarded-for") ??
     request.headers.get("x-real-ip") ??
     // Use the RIGHTMOST entry in x-forwarded-for — it is the one appended by
     // the infrastructure closest to the server and hardest to spoof.
@@ -109,18 +108,18 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
 
     // ── Cron routes: require auth ───────────────────────────────────────
-    // Vercel Cron Jobs are identified by User-Agent: Vercelbot and are
-    // allowed through. All other requests must provide a valid Bearer token
-    // or ?secret= query param.
+    // All cron requests must provide a valid Bearer token or ?secret= query
+    // param. Host crontab calls curl with the Bearer header.
     if (isCron) {
-      const userAgent = request.headers.get("User-Agent") ?? "";
-      const isVercelCron = userAgent.includes("Vercelbot");
-      if (!isVercelCron) {
-        const cronSecret = process.env.CRON_SECRET?.trim();
-        const queryToken = searchParams.get("secret");
-        if (!queryToken || !cronSecret || !timingSafeCompare(queryToken, cronSecret)) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+      const cronSecret = process.env.CRON_SECRET?.trim();
+      const authHeader = request.headers.get("Authorization");
+      const bearerToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
+      const queryToken = searchParams.get("secret");
+      const token = bearerToken ?? queryToken;
+      if (!token || !cronSecret || !timingSafeCompare(token, cronSecret)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 
@@ -162,6 +161,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
+  // Node.js runtime is required because the rate limiter uses ioredis (a
+  // native TCP client), which is not available in the Edge runtime.
+  runtime: "nodejs",
   // Cover all API routes — rate limiting public, auth + rate limiting protected
   matcher: ["/api/:path*"],
 };

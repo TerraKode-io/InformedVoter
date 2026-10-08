@@ -5,21 +5,11 @@ import { timingSafeEqual } from "crypto";
  * Prevents timing attacks that could leak the secret character by character.
  *
  * Checks the `Authorization: Bearer <token>` header first, then falls back to
- * the `?secret=<token>` query parameter (useful for Vercel Cron Jobs).
+ * the `?secret=<token>` query parameter (useful for host crontab / external schedulers).
  */
 export function verifyCronSecret(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET?.trim();
   if (!cronSecret) return false;
-
-  // Allow Vercel Cron Jobs (identified by User-Agent header).
-  // This is safe because idempotent sync jobs are additionally protected
-  // by rate limiting (300 req/60s) and the requests originate from Vercel's
-  // infrastructure. The User-Agent can be spoofed, but an attacker would still
-  // need to bypass rate limiting to trigger expensive operations.
-  const userAgent = request.headers.get("User-Agent") ?? "";
-  if (userAgent.includes("Vercelbot")) {
-    return true;
-  }
 
   const authHeader = request.headers.get("Authorization");
   const bearerToken = authHeader?.startsWith("Bearer ")

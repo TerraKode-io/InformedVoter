@@ -154,13 +154,13 @@ describe("withCronErrorHandler", () => {
     expect(body.recordsProcessed).toBe(5);
   });
 
-  it("returns HTTP 200 on failure to prevent Vercel retries", async () => {
+  it("returns HTTP 500 on failure so host cron logs the failure", async () => {
     const handler = withCronErrorHandler(async (_request: Request) => {
       throw new Error("Sync failed");
     }, { route: "GET /api/cron/sync-test", jobName: "sync-test" });
 
     const response = (await handler(new Request("http://localhost"))) as Response;
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.success).toBe(false);
     expect(body.code).toBe("CRON_JOB_FAILED");
@@ -168,13 +168,13 @@ describe("withCronErrorHandler", () => {
     expect(body.message).toMatch(/check DataSyncLog/i);
   });
 
-  it("returns HTTP 200 on AppError failures too", async () => {
+  it("returns HTTP 500 on AppError failures too", async () => {
     const handler = withCronErrorHandler(async (_request: Request) => {
       throw new DatabaseError("DB down");
     }, { jobName: "sync-test" });
 
     const response = (await handler(new Request("http://localhost"))) as Response;
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.success).toBe(false);
     expect(body.code).toBe("CRON_JOB_FAILED");

@@ -1,6 +1,6 @@
 # InformedVoter — Project Context
 
-> **Last Updated:** 2026-06-05  
+> **Last Updated:** 2026-10-08  
 > **Purpose:** Paste this into a new AI chat session to bring it up to speed on the entire project.
 
 ---
@@ -9,11 +9,11 @@
 
 **InformedVoter** (`https://knowyourgov.us`) is a nonpartisan US civic information platform — the "Wikipedia for government." It helps voters research representatives, track legislation, follow Supreme Court cases, explore campaign finance, find polling places, and prepare for local city council meetings — all explained in plain English, often with AI-generated summaries.
 
-**Stack:** Next.js 16 + TypeScript + Tailwind CSS v4 + Prisma 5.22 + Supabase PostgreSQL 16 + Upstash Redis + Anthropic Claude + Resend email.
+**Stack:** Next.js 16 + TypeScript + Tailwind CSS v4 + Prisma 5.22 + self-hosted PostgreSQL 16 + self-hosted Redis + Anthropic Claude + Resend email.
 
-**Hosting History:** Originally on **Vercel + Supabase + Upstash Redis** → migrated to **self-hosted VPS (Docker Compose + Nginx)** → now **returned to Vercel + Supabase**.
+**Hosting History:** Vercel + Supabase → self-hosted VPS (Docker/Nginx) → back to Vercel + Supabase → **now migrated to self-hosted Proxmox (`pve`)**.
 
-**Current Status:** Deployed to Vercel + Supabase + Upstash Redis. Production alias: `https://informed-voter.vercel.app`. All Supabase tables created, RLS policies applied, middleware active, 13 cron jobs scheduled. UAT completed (179 cases, 175 passes, 0 real failures). All 3 UAT issues fixed and verified in production. Security audit deployed (18 hardening measures).
+**Current Status:** Migrating to self-hosted Proxmox. Two VMs: `iv-app` (VLAN 10 mgmt + VLAN 100 public DNAT + VPC; Caddy + Next.js + Umami) and `iv-data` (VLAN 10 mgmt + VPC; PostgreSQL 16 + Redis 7). Public IP `50.184.245.19` via Cloudflare. See `documentation/14_ONPREM_DEPLOYMENT.md` and the network repo `03-SERVICES/informedvoter-civic.md`.
 
 ---
 
@@ -25,38 +25,35 @@
 | Language | TypeScript 5.9+ | Strict mode, `@/*` → `./src/*` |
 | Styling | Tailwind CSS v4 | `@import "tailwindcss"` in globals.css, no tailwind.config.js |
 | ORM | Prisma 5.22 | PostgreSQL only, `postinstall` runs `prisma generate` |
-| DB | Supabase Postgres 16 | Project: `hzzcqcsgcreloxashaph` (us-east-1) |
-| Cache / Rate Limit | Upstash Redis | `@upstash/redis` (edge-compatible) |
+| DB | PostgreSQL 16 (self-hosted) | Docker on `iv-data`, VPC `10.39.112.20`, no pooler |
+| Cache / Rate Limit | Redis 7 (self-hosted) | `ioredis`, VPC `10.39.112.20`, Node-runtime middleware |
 | AI | Anthropic SDK 0.85 | `claude-haiku-4-5` (cheap), `claude-sonnet-4-5` (complex analysis) |
 | State Mgmt | TanStack Query v5 | Server-state caching with `staleTime: 5min`, `gcTime: 10min` |
 | Email | Resend | Verification + digest emails |
 | Icons | Lucide React | Exclusive icon library |
 | Animations | Framer Motion | Entrance animations, tabs, mobile drawer, accordions |
-| Hosting | Vercel (target) | Serverless, CDN, image optimization, cron jobs |
-| Analytics | Vercel Web Analytics | `@vercel/analytics` restored in layout.tsx |
+| Hosting | Proxmox (self-hosted) | 2 VMs, Docker Compose, Caddy TLS (DNS-01), host crontab |
+| Analytics | Umami (self-hosted) | Container on `iv-app`; script in layout.tsx |
 
 ---
 
-## 3. Supabase Database (Connected)
+## 3. Database (self-hosted PostgreSQL on `iv-data`)
 
-**Project URL:** `https://hzzcqcsgcreloxashaph.supabase.co`  
-**Project Ref:** `hzzcqcsgcreloxashaph`  
-**Region:** `us-east-1` (inferred from DNS IPv6: `2600:1f18`)  
-**Publishable Key (anon):** *(see `.creds/creds.md`)*  
-**Secret Key (service_role):** *(see `.creds/creds.md`)*  
-**Database Password:** *(see `.creds/creds.md`)*
+**Engine:** PostgreSQL 16 (Docker container `iv-postgres`)  
+**Address:** `10.39.112.20:5432` (VPC `vmbr2`, `10.39.112.0/20`) — reachable only from `iv-app` (`10.39.112.19`)  
+**Database / user:** `informedvoter`  
+**Password:** *(see `.creds/creds.md`)*
 
-### Connection Strings
-- **DIRECT_URL** (migrations, seeds, Prisma Studio):  
-  `postgresql://postgres:[PASSWORD]@db.hzzcqcsgcreloxashaph.supabase.co:5432/postgres`
-- **DATABASE_URL** (Vercel runtime, pooler):  
-  `postgresql://postgres.hzzcqcsgcreloxashaph:[PASSWORD]@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
+### Connection String
+- **DATABASE_URL:** `postgresql://informedvoter:[PASSWORD]@10.39.112.20:5432/informedvoter?schema=public`
+
+### Migration Source (Supabase, being retired)
+- Former Supabase project `hzzcqcsgcreloxashaph` (us-east-1) is the **source** for the
+  `pg_dump`/`pg_restore` migration. Once verified, it is decommissioned.
 
 ### Schema Status
-- **Existing tables** (already in Supabase): `State`, `Candidate`, `Bill`, `CourtCase`, `Justice`, `Election`, `VoterInfo`, `Committee`, `PacContribution`, `DataSyncLog`, `User`, `UserBookmark`, `Subscriber`, and all finance/judicial tables.
-- **All tables created:** `Municipality`, `LocalMeeting`, `MeetingAgendaItem`, `SubmittedMeeting` created via `supabase/missing-tables.sql`
-- **RLS policies applied:** `supabase/rls-policies.sql` run — public read access on civic data tables, default deny on PII tables
-- **Upstash Redis provisioned:** `informedvoter-redis` in `us-east-1`
+- All tables come from `prisma/schema.prisma` via `prisma db push`.
+- Seed scripts: `prisma/seed.ts`, `prisma/seed-governors.mjs`, `prisma/seed-elections.mjs`.
 
 ---
 

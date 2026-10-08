@@ -1,26 +1,37 @@
-import { Redis } from "@upstash/redis";
+import Redis from "ioredis";
 
 // ─────────────────────────────────────────────
-// Upstash Redis client (edge-compatible)
-// Gracefully absent if env vars are not set.
+// Redis client (native, on-prem) — ioredis
+// Gracefully absent if REDIS_URL is not set.
+// Reused across hot reloads in dev via globalThis.
 // ─────────────────────────────────────────────
 
-let redis: Redis | null = null;
+const globalForRedis = globalThis as unknown as { ivRedis?: Redis | null };
 
-if (process.env.UPSTASH_REDIS_URL && process.env.UPSTASH_REDIS_TOKEN) {
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_URL,
-    token: process.env.UPSTASH_REDIS_TOKEN,
+function createRedis(): Redis | null {
+  const url = process.env.REDIS_URL;
+  if (!url) return null;
+  const client = new Redis(url, {
+    maxRetriesPerRequest: 1,
+    enableOfflineQueue: false,
+    lazyConnect: false,
+    retryStrategy: (times) => Math.min(times * 200, 2000),
   });
+  // Never crash the server on a Redis blip; calls fail open below.
+  client.on("error", () => {});
+  return client;
 }
+
+const redis = globalForRedis.ivRedis ?? createRedis();
+if (process.env.NODE_ENV !== "production") globalForRedis.ivRedis = redis;
 
 // ─────────────────────────────────────────────
 // Fixed-window rate limiter
 //
 // Returns { allowed: true } when the request should proceed.
 // Returns { allowed: false } when the limit is exceeded.
-// Falls back to allowing all requests when Redis is not configured,
-// so the app continues to work without Redis during development.
+// Falls back to allowing all requests when Redis is not configured or
+// unreachable, so the app continues to work without Redis.
 // ─────────────────────────────────────────────
 
 export interface RateLimitResult {
@@ -49,11 +60,16 @@ export async function checkRateLimit(
     const window = Math.floor(Date.now() / (windowSec * 1000));
     const key = `rl:${identifier}:${window}`;
 
-    // Atomically initialise the key with a TTL if it does not yet exist.
-    // `set nx` is atomic, so even under a race only one request creates the
-    // key — but all requests can safely increment afterwards.
-    await redis.set(key, "0", { nx: true, ex: windowSec });
-    const count = await redis.incr(key);
+    // `set key 0 EX windowSec NX` + `incr key` in a single MULTI transaction.
+    // The NX guarantees only the first request in a window sets the TTL, while
+    // every request safely increments.
+    const results = await redis
+      .multi()
+      .set(key, "0", "EX", windowSec, "NX")
+      .incr(key)
+      .exec();
+
+    const count = Number(results?.[1]?.[1] ?? 0);
 
     const remaining = Math.max(0, limit - count);
     const secondsIntoWindow = (Date.now() / 1000) % windowSec;
@@ -74,7 +90,7 @@ export async function checkRateLimit(
 export async function acquireLock(key: string, ttlSec: number): Promise<boolean> {
   if (!redis) return true; // Fail open if Redis is unavailable
   try {
-    const acquired = await redis.set(`lock:${key}`, "1", { nx: true, ex: ttlSec });
+    const acquired = await redis.set(`lock:${key}`, "1", "EX", ttlSec, "NX");
     return acquired === "OK";
   } catch {
     return true; // Fail open on Redis error

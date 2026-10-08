@@ -8,7 +8,6 @@ const VALID_TONES = new Set(["professional", "assertive"]);
 function getClientIP(request: NextRequest): string {
   return (
     request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-vercel-forwarded-for") ??
     request.headers.get("x-real-ip") ??
     request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ??
     "unknown"

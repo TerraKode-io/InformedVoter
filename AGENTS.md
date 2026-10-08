@@ -10,7 +10,7 @@
 
 **InformedVoter** (`https://knowyourgov.us`) is a nonpartisan US civic information platform. It surfaces data about Congress, the Supreme Court, federal agencies, campaign finance, elections, and local government — explained in plain English, often with AI-generated summaries.
 
-The stack is **Next.js 16 + TypeScript** (App Router, Turbopack), **Tailwind CSS v4**, **Supabase PostgreSQL** via Prisma, **Upstash Redis** for rate limiting, and **Anthropic Claude** for bill, case, candidate, and local-meeting analysis.
+The stack is **Next.js 16 + TypeScript** (App Router, Turbopack), **Tailwind CSS v4**, **self-hosted PostgreSQL** via Prisma, **self-hosted Redis** for rate limiting, and **Anthropic Claude** for bill, case, candidate, and local-meeting analysis.
 
 ---
 
@@ -22,14 +22,15 @@ The stack is **Next.js 16 + TypeScript** (App Router, Turbopack), **Tailwind CSS
 | Language | TypeScript | 5.9+, strict mode, `"@/*"` maps to `./src/*` |
 | Styling | Tailwind CSS | v4 (`@import "tailwindcss"` in `globals.css`), `@tailwindcss/postcss` |
 | ORM | Prisma | 5.22, PostgreSQL only; `postinstall` runs `prisma generate` |
-| DB | Supabase PostgreSQL | 16, connection pooler for serverless, direct URL for migrations |
-| Cache / Rate-limit | Upstash Redis | `@upstash/redis` REST client; edge-compatible; falls open if unset |
+| DB | PostgreSQL (self-hosted) | 16, Docker container on the data VM (`iv-data`); no connection pooler needed |
+| Cache / Rate-limit | Redis (self-hosted) | `ioredis`; middleware runs on the Node runtime; falls open if unset |
 | AI | Anthropic SDK | `claude-haiku-4-5` for cheap tasks, `claude-sonnet-4-5` for complex analysis |
 | Email | Resend | Verification + digest emails |
 | State Management | TanStack Query | React Query v5 for server-state caching |
 | Icons | Lucide React | |
 | Animations | Framer Motion | |
-| Hosting | Vercel | Serverless functions, Edge CDN, image optimization, cron jobs |
+| Hosting | Self-hosted Proxmox | 2 VMs (`iv-app` + `iv-data`), Docker Compose, Caddy (DNS-01 TLS), host crontab |
+| Analytics | Umami (self-hosted) | Container on `iv-app`; script injected in `layout.tsx` |
 
 ---
 
@@ -184,16 +185,17 @@ documentation/           # Comprehensive project docs (14 markdown files)
 Copy `.env.example` to `.env` and fill in values.
 
 **Required:**
-- `DATABASE_URL` — Supabase Connection Pooler (`?pgbouncer=true`)
-- `DIRECT_URL` — Supabase Direct Connection (for migrations / Prisma Studio)
+- `DATABASE_URL` — self-hosted PostgreSQL (`postgresql://informedvoter:<pass>@10.39.112.20:5432/informedvoter`, reached over the VPC)
+- `REDIS_URL` — self-hosted Redis (`redis://:<pass>@10.39.112.20:6379`, reached over the VPC)
 - `ANTHROPIC_API_KEY` — Claude AI access
 - `NEXT_PUBLIC_BASE_URL` — e.g. `https://knowyourgov.us`
+- `CF_API_TOKEN` — Cloudflare DNS token (Caddy Let's Encrypt DNS-01)
 
 **Optional (for data sync):**
 - `CONGRESS_GOV_API_KEY`, `LEGISCAN_API_KEY`, `FEC_API_KEY`, `GOOGLE_CIVIC_API_KEY`, `COURTLISTENER_API_TOKEN`
-- `UPSTASH_REDIS_URL` + `UPSTASH_REDIS_TOKEN` — Upstash Redis REST credentials
-- `CRON_SECRET` — Secret for `/api/ai/*` auth and optional cron query-param auth
+- `CRON_SECRET` — Secret for `/api/ai/*` auth and cron auth (Bearer header or `?secret=` query param)
 - `RESEND_API_KEY` + `EMAIL_FROM`
+- `NEXT_PUBLIC_UMAMI_SCRIPT_URL` + `NEXT_PUBLIC_UMAMI_WEBSITE_ID` — self-hosted analytics
 
 **Dev-only:**
 - `ALLOW_MANUAL_CRON=true` — **Never in production.** Allows `?manual=true` to bypass cron auth for local dev.
@@ -206,17 +208,17 @@ Copy `.env.example` to `.env` and fill in values.
 ## API & Middleware
 
 ### Middleware (`src/middleware.ts`)
-Runs on **all** `/api/*` routes:
+Runs on the **Node.js runtime** (`config.runtime = "nodejs"`, required by ioredis) on **all** `/api/*` routes:
 
 | Route Prefix | Rate Limit | Auth |
 |--------------|-----------|------|
 | `/api/ai/*` | 300 req / 60s | Bearer token via `CRON_SECRET` (timing-safe compare) |
-| `/api/cron/*` | 300 req / 60s | Middleware: `?secret=` query param OR Vercel Cron Jobs (`User-Agent: Vercelbot`). Route handler: `verifyCronSecret()` (Bearer header). Defense-in-depth. |
+| `/api/cron/*` | 300 req / 60s | Middleware: `?secret=` query param OR Bearer header. Route handler: `verifyCronSecret()` (Bearer header). Defense-in-depth. |
 | `/api/subscribe` (POST) | 5 req / 60s | None |
 | All other `/api/*` | 60 req / 60s | None |
 
-- Rate limiting uses Upstash Redis fixed-window counters. If Redis is unavailable, it **fails open** (allows all requests).
-- Client IP detection prefers `cf-connecting-ip`, then `x-vercel-forwarded-for`, then `x-real-ip`, then the **rightmost** entry in `x-forwarded-for` (hardest to spoof).
+- Rate limiting uses self-hosted Redis (`ioredis`) fixed-window counters. If Redis is unavailable, it **fails open** (allows all requests).
+- Client IP detection prefers `cf-connecting-ip`, then `x-real-ip`, then the **rightmost** entry in `x-forwarded-for` (hardest to spoof).
 
 ### API Route Conventions
 - Route handlers live in `src/app/api/<route>/route.ts`.
@@ -233,13 +235,13 @@ Runs on **all** `/api/*` routes:
 
 1. **Rate Limiting** — Redis-backed, per-IP, tiered limits (see Middleware above).
 2. **Cron Authentication** — Defense-in-depth with two layers:
-   - **Middleware** (`src/middleware.ts`): Inline `timingSafeCompare` (Edge Runtime compatible). AI routes require `Authorization: Bearer <CRON_SECRET>`. Cron routes allow `User-Agent: Vercelbot` OR validate `?secret=<CRON_SECRET>`.
+   - **Middleware** (`src/middleware.ts`): Inline `timingSafeCompare`. AI routes require `Authorization: Bearer <CRON_SECRET>`. Cron routes accept a Bearer header OR a valid `?secret=<CRON_SECRET>` query param.
    - **Route handlers** (`src/lib/auth.ts`): `verifyCronSecret()` uses Node.js `crypto.timingSafeEqual` for Bearer header comparison. Performs dummy comparison on length mismatch to prevent length leakage.
 3. **Security Headers** — Set in `next.config.mjs`:
    - `Content-Security-Policy` (strict, with `unsafe-inline` for scripts/styles)
    - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Strict-Transport-Security` (with `preload`), `Permissions-Policy`
-4. **Input Sanitization** — `sanitize-html` for rendering external HTML. Allowed tags are restricted to safe markup in `src/lib/sanitize.ts`. Replaced `isomorphic-dompurify` (which crashed in Vercel serverless due to `jsdom` → `parse5@8` ESM-only dependency).
-5. **Supabase RLS** — Row Level Security policies on all tables. Public read access for civic data; default-deny for PII tables.
+4. **Input Sanitization** — `sanitize-html` for rendering external HTML. Allowed tags are restricted to safe markup in `src/lib/sanitize.ts`. Replaced `isomorphic-dompurify` (which crashed in serverless due to `jsdom` → `parse5@8` ESM-only dependency).
+5. **Database Isolation** — PostgreSQL binds the VPC address on `iv-data` and is reachable only from `iv-app` (`10.39.112.19`). No public route to the database; the app VM sits on VLAN 100 behind a Cloudflare-source-locked DNAT.
 6. **Error Sanitization** — All API routes wrapped with `withErrorHandler` / `withCronErrorHandler` (`src/lib/api-error-handler.ts`). Raw errors, stack traces, subsystem names ("Prisma", "Redis", "Claude"), and internal codes (P2002) are NEVER exposed to clients. Typed error hierarchy in `src/lib/errors/` with `AppError` base + 8 domain subclasses.
 
 ---
@@ -266,7 +268,7 @@ The client includes `extractJson()` to handle markdown code fences in model outp
 
 ## Data Sync (Cron Jobs)
 
-Cron jobs are triggered via Vercel Cron Jobs (see `vercel.json`).  
+Cron jobs are triggered by the host crontab on `iv-app` (see `scripts/cron-setup.sh`).  
 All cron routes live in `src/app/api/cron/<job>/route.ts`.
 
 | Job | Schedule | Source |
@@ -326,19 +328,18 @@ See `documentation/10_TESTING.md` for a comprehensive manual testing checklist c
 
 ## Deployment
 
-### Vercel (Current)
-1. Connect GitHub repo in Vercel Dashboard → auto-deploys on every push to `main`
-2. Add environment variables in Vercel Project Settings:
-   - `DATABASE_URL` — Supabase Connection Pooler
-   - `DIRECT_URL` — Supabase Direct Connection
-   - `UPSTASH_REDIS_URL` + `UPSTASH_REDIS_TOKEN`
-   - `CRON_SECRET`, `NEXT_PUBLIC_BASE_URL`, API keys
-3. Cron jobs are configured in `vercel.json` (13 schedules)
+### Self-hosted Proxmox (Current)
+Two VMs on `pve` (`10.10.10.100`), fully separate from TerraKode:
 
-### VPS (Deprecated)
-VPS/Docker files have been moved to `.deprecated/` for reference. The project no longer runs on self-hosted infrastructure.
+- **`iv-app`** (VMID 264) — VLAN 10 mgmt (`10.10.10.130`) + VLAN 100 (`10.10.100.117`, public DNAT origin) + VPC (`10.39.112.19`). Runs Caddy (TLS), the Next.js app, and Umami.
+- **`iv-data`** (VMID 265) — VLAN 10 mgmt (`10.10.10.131`) + VPC (`10.39.112.20`). Runs PostgreSQL 16 + Redis 7.
 
-> **Note:** This project was originally on Vercel, migrated to VPS/Docker, and has now returned to Vercel + Supabase + Upstash Redis.
+Ingress: `Cloudflare (proxied, Full strict) → 50.184.245.19:80/443 (source-locked to cloudflare_ips) → 10.10.100.117`. Database/Redis are VPC-only.
+
+Deploy: `./scripts/deploy.sh` on `iv-app` (builds `docker-compose.app.yml`). Data tier: `docker compose -f docker-compose.data.yml up -d` on `iv-data`. Cron: `scripts/cron-setup.sh`. Full runbook: `documentation/14_ONPREM_DEPLOYMENT.md` and the network repo's `03-SERVICES/informedvoter-civic.md`.
+
+### Vercel + Supabase (Deprecated)
+The project was migrated off Vercel + Supabase. `vercel.json` and the Supabase configs are removed; migration history: `documentation/13_VERCEL_SUPABASE_MIGRATION.md`.
 
 ---
 
@@ -347,9 +348,9 @@ VPS/Docker files have been moved to `.deprecated/` for reference. The project no
 - **Do not assume a test runner exists.** Verify before writing tests.
 - **Prisma client reuse:** Use the exported `prisma` from `@/lib/db`. Do not instantiate `new PrismaClient()` in random files — it leaks connections in dev.
 - **Redis fallback:** Rate limiting silently allows all traffic when Redis is down. This is intentional for local dev, but confirm Redis is wired up in production.
-- **Cron auth (defense-in-depth):** Middleware checks `?secret=` or `User-Agent: Vercelbot` for cron routes. Route handlers additionally enforce `verifyCronSecret()` (Bearer header). Both use constant-time comparison. Manual triggers blocked in production. Local dev can use `ALLOW_MANUAL_CRON=true` + `?manual=true`.
+- **Cron auth (defense-in-depth):** Middleware checks `?secret=` or the Bearer header for cron routes. Route handlers additionally enforce `verifyCronSecret()` (Bearer header). Both use constant-time comparison. Manual triggers blocked in production. Local dev can use `ALLOW_MANUAL_CRON=true` + `?manual=true`.
 - **Distributed locks:** AI analysis and digest cron jobs use Redis `SET NX EX` locks to prevent duplicate work and duplicate emails.
 - **External API keys:** Many data-sync features fail gracefully when API keys are missing. Check for key presence before making expensive calls.
 - **Local meeting data is fragmented.** There is no unified national API for city council meetings. Coverage requires building adapters for multiple platforms (Legistar, CivicPlus, etc.).
-- **Supabase direct connection:** `db.XXX.supabase.co` is IPv6-only. If `prisma db push` fails with P1001 from your local machine, use the Supabase SQL Editor instead.
+- **Middleware runtime:** `src/middleware.ts` must stay on the Node.js runtime (`config.runtime = "nodejs"`) because the rate limiter uses `ioredis`. Moving it to Edge will break rate limiting.
 - **Cookie-based state selection:** `useUserState` stores the user's selected state in a cookie (`selected-state`), not localStorage. It is read client-side only after hydration to avoid SSR/hydration mismatches.

@@ -208,8 +208,10 @@ export function withErrorHandler<
 
 /**
  * Special wrapper for cron job routes.
- * Returns HTTP 200 to Vercel on failure to prevent infinite retry loops,
- * but with a body indicating the job failed. Logs full details internally.
+ * On failure it logs full details internally and returns HTTP 500 with a body
+ * indicating the job failed. The host crontab uses `curl -f`, which records a
+ * non-zero exit for failed jobs (visible in the cron log) while continuing to
+ * run the other jobs.
  */
 export function withCronErrorHandler<
   T extends (...args: any[]) => Promise<Response> | Response
@@ -243,8 +245,8 @@ export function withCronErrorHandler<
             : undefined,
       });
 
-      // Always return 200 to Vercel to prevent retry loops,
-      // but indicate failure in the body
+      // Return 500 so host crontab (`curl -f`) surfaces the failure in logs,
+      // but indicate the failure in the body too.
       return Response.json(
         {
           success: false,
@@ -254,7 +256,7 @@ export function withCronErrorHandler<
           job: options.jobName,
         },
         {
-          status: 200,
+          status: 500,
           headers: {
             "Cache-Control": "no-store, must-revalidate",
             "X-Request-Id": requestId,
