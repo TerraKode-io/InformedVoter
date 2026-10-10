@@ -31,9 +31,9 @@ As of the final pass the production E2E suite is fully green.
 | S-2 | `js-yaml@4.3.2`, `postcss@8.5.29`, `sanitize-html@2.18.0`, `@anthropic-ai/sdk@0.133.0`, `resend` | prod audit clean | Fixed |
 | S-3 | `sanitize.ts` explicit `allowedSchemes` + attr scoping; sanitizer upgraded | code + unit | Fixed |
 | S-4 | `sharp`/libvips via Next upgrade | prod audit clean | Fixed |
-| H-1 | Live secrets remain on shared disk (gitignored, history clean) | gitleaks git = 0 | **Open — operator action** (rotate keys, ACLs, secret store) |
-| F-1 | Removed redundant local `try/catch` in `search`, `scotus/cases`, `district-lookup`, `polling-places`, `subscribe` | unit tests + local server log (`400 INVALID_REQUEST`, requestId) | Fixed |
-| F-2 | Added `www.congress.gov`/`congress.gov` to `images.remotePatterns` | local `/_next/image` → 200 | Fixed |
+| H-1 | Secrets live only on the operator's own machine; single-user access | gitleaks git = 0 | **Accepted — operator-only host** |
+| F-1 | Removed redundant local `try/catch` in `search`, `scotus/cases`, `district-lookup`, `polling-places`, `subscribe` | unit tests + live `400 INVALID_REQUEST` | Fixed |
+| F-2 | Added `www.congress.gov`/`congress.gov` to `images.remotePatterns` | live `/_next/image` → 200 | Fixed |
 | F-3 | `export const dynamic = "force-dynamic"` in `sitemap.ts` | build output `ƒ /sitemap.xml` | Fixed |
 | F-4 | `htmlFor`/`id` on all `/local` form controls | axe `/local` critical = 0 | Fixed |
 | F-5 | CSP `script-src` allows `static.cloudflareinsights.com` (+ `connect-src`) | local header check | Fixed |
@@ -41,9 +41,9 @@ As of the final pass the production E2E suite is fully green.
 | F-8 | New `src/app/search/page.tsx` (resilient to DB errors) | local `/search?q=` → 200 | Fixed |
 | F-9 | `vitest.config.ts` scoped to `src/**` so Vitest no longer collects Playwright specs | `npm test` 3→4 files clean | Fixed |
 | NEW | `src/app/global-error.tsx`; witty, sanitized 401/403/404 copy (`fallback-messages.ts`, error classes); existing `error.tsx`/`not-found.tsx` retained. **No message/stack/digest leakage** | build; code review | Fixed |
-| H-2 | Offensive `.deprecated/scripts/*` retained (untracked) | — | **Open — operator action** (delete) |
-| H-3 | `poweredByHeader: false`; CORS tightened from `*` to configured origin (+`Vary: Origin`) | local header checks | Fixed |
-| H-4 | `Dockerfile` installs pinned `prisma` (no unpinned `npx` fetch); caddy `HEALTHCHECK`; PG comment 16→17 | config review (containers not runnable here) | Fixed (untested runtime) |
+| H-2 | Privesc/exploit/recon scripts deleted from `.deprecated/scripts/` (21 files); deploy scripts kept | filesystem review | Fixed |
+| H-3 | `poweredByHeader: false`; CORS tightened from `*` to configured origin (+`Vary: Origin`) | live header checks | Fixed |
+| H-4 | `Dockerfile` installs pinned `prisma` (no unpinned `npx` fetch); caddy `HEALTHCHECK`; PG comment 16→17 | **deployed: `iv-app` + `iv-caddy` both `Up (healthy)`** | Verified |
 | H-5 | `send-digest` logs subscriber id, not email | code review | Fixed |
 | H-6 | Middleware manual-cron check aligned to `development` | local `?manual=true` → 403 | Fixed |
 | H-7 | Redis fail-open documented (by design) | — | Accepted |
@@ -54,5 +54,7 @@ As of the final pass the production E2E suite is fully green.
 - **Dev-only audit residual**: `eslint-config-next` (and transitive `braces`/`micromatch`/`fast-glob`)
   and `esbuild`/`vitest` advisories remain in devDependencies; they do not ship in the runtime image
   (`npm ci --omit=dev`). Accepted.
-- H-1/H-2 need operator action (external key rotation; deleting gitignored offensive scripts).
-- Container changes (H-4) were not runtime-tested (no Docker on the workstation).
+- H-1 accepted: secrets are confined to the operator's own workstation (single-user access);
+  git history is clean.
+- H-2 completed: 21 privesc/exploit/recon scripts removed from `.deprecated/scripts/`.
+- H-4 verified in production: `iv-caddy` and `iv-app` run `Up (healthy)` after the rebuild.
