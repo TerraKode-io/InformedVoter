@@ -230,9 +230,17 @@ function buildNameVariants(name: string): string[] {
     if (lastName && firstName) {
       // "Jack Reed" (first last)
       variants.push(`${firstName} ${lastName.trim()}`);
-      // Just last name — FEC will filter by state+office
+      // Just last name - FEC will filter by state+office
       variants.push(lastName.trim());
     }
+  } else {
+    // Names without a comma (e.g. "Markwayne Mullin"): also try the last
+    // word alone — FEC matches on surname and ignores case.
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      variants.push(parts[parts.length - 1]);
+    }
+  }
   }
 
   // Deduplicate
