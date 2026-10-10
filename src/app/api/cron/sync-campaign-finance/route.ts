@@ -786,7 +786,7 @@ export const GET = withCronErrorHandler(async (request: Request) => {
       WHERE c."officeType" IN ('US_SENATOR', 'US_REPRESENTATIVE')
         AND c."contactInfo" ? 'bioguideId'
       ORDER BY (
-        SELECT MAX(f."updatedAt") FROM "CandidateFinance" f WHERE f."candidateId" = c.id
+        SELECT MAX(f."lastUpdated") FROM "CandidateFinance" f WHERE f."candidateId" = c.id
       ) ASC NULLS FIRST, c.id ASC
       LIMIT ${candidatesPerRun}
     `;
