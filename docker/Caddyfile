@@ -1,30 +1,24 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # InformedVoter — Caddyfile
-# TLS uses a Cloudflare Origin CA certificate (valid 15 years), mounted at
-# /certs. Cloudflare SSL mode must be "Full (strict)".
+# TLS uses a single Cloudflare Origin CA certificate covering every project
+# domain (SANs: 6 apexes + wildcards), mounted at /certs. Cloudflare SSL mode
+# must be "Full (strict)" on all zones.
 # ═══════════════════════════════════════════════════════════════════════════
 
 {
 	email admin@knowyourgov.us
 }
 
-# ── Main site ───────────────────────────────────────────────────────────────
-knowyourgov.us {
+# ── Main site: all project domains ──────────────────────────────────────────
+knowyourgov.us www.knowyourgov.us govguide.online www.govguide.online governmentmadeclear.com www.governmentmadeclear.com govmadeclear.com www.govmadeclear.com knowourgov.com www.knowourgov.com knowyourgov.online www.knowyourgov.online {
 	encode zstd gzip
-	tls /certs/knowyourgov.pem /certs/knowyourgov.key
+	tls /certs/civicsites.pem /certs/civicsites.key
 	reverse_proxy app:3000
-}
-
-# ── www → apex ──────────────────────────────────────────────────────────────
-www.knowyourgov.us {
-	encode zstd gzip
-	tls /certs/knowyourgov.pem /certs/knowyourgov.key
-	redir https://knowyourgov.us{uri} permanent
 }
 
 # ── Umami analytics ─────────────────────────────────────────────────────────
 analytics.knowyourgov.us {
 	encode zstd gzip
-	tls /certs/knowyourgov.pem /certs/knowyourgov.key
+	tls /certs/civicsites.pem /certs/civicsites.key
 	reverse_proxy umami:3000
 }
