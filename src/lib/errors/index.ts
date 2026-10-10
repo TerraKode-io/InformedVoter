@@ -121,7 +121,7 @@ export class NotFoundError extends AppError {
   readonly publicCode = "NOT_FOUND";
 
   constructor(
-    message = "This page cannot be found.",
+    message = "Sorry, but we can't find that anywhere on this site.",
     options?: {
       context?: ErrorContext;
       requestId?: string;
@@ -204,7 +204,7 @@ export class AuthenticationError extends AppError {
   readonly publicCode = "UNAUTHORIZED";
 
   constructor(
-    message = "Unauthorized.",
+    message = "Sorry, but you aren't authorized to be here.",
     options?: {
       context?: ErrorContext;
       requestId?: string;

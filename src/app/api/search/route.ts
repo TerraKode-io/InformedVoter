@@ -10,7 +10,6 @@ import { withErrorHandler, ValidationError, NotFoundError } from "@/lib/api-erro
 const MAX_RESULTS_PER_TYPE = 10;
 
 export const GET = withErrorHandler(async (request: Request) => {
-  try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim();
 
@@ -76,8 +75,4 @@ export const GET = withErrorHandler(async (request: Request) => {
     ]);
 
     return Response.json({ bills, candidates });
-  } catch (error) {
-    console.error("[search] Unexpected error:", error);
-    return Response.json({ error: "Internal server error" }, { status: 500 });
-  }
 }, { route: "GET /api/search" });

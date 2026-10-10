@@ -35,7 +35,6 @@ interface CivicRepresentativeResponse {
 }
 
 export const GET = withErrorHandler(async (request: Request) => {
-  try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get("address")?.trim();
 
@@ -126,8 +125,4 @@ export const GET = withErrorHandler(async (request: Request) => {
       districts,
       normalizedAddress: data.normalizedInput ?? null,
     });
-  } catch (error) {
-    console.error("[district-lookup] Unexpected error:", error);
-    return Response.json({ error: "Internal server error" }, { status: 500 });
-  }
 }, { route: "GET /api/district-lookup" });

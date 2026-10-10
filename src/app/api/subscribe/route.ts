@@ -18,7 +18,6 @@ const VALID_STATES = new Set([
 ]);
 
 export const POST = withErrorHandler(async (request: Request) => {
-  try {
     const body = await request.json();
     const email = (body.email as string)?.trim().toLowerCase();
     const stateAbbr = (body.stateAbbr as string)?.trim().toUpperCase();
@@ -79,8 +78,4 @@ export const POST = withErrorHandler(async (request: Request) => {
       success: true,
       message: "Check your email to confirm your subscription.",
     });
-  } catch (error) {
-    console.error("[subscribe] Error:", error);
-    return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
-  }
 }, { route: "POST /api/subscribe" });

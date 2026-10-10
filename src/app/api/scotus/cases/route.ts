@@ -6,7 +6,6 @@ import { withErrorHandler, ValidationError, NotFoundError } from "@/lib/api-erro
 // ─────────────────────────────────────────────
 
 export const GET = withErrorHandler(async (request: Request) => {
-  try {
     const { searchParams } = new URL(request.url);
     const termParam = searchParams.get("term")?.trim();
     const statusParam = searchParams.get("status")?.trim().toUpperCase();
@@ -51,8 +50,4 @@ export const GET = withErrorHandler(async (request: Request) => {
     });
 
     return Response.json({ cases });
-  } catch (error) {
-    console.error("[scotus/cases] Unexpected error:", error);
-    return Response.json({ error: "Internal server error" }, { status: 500 });
-  }
 }, { route: "GET /api/scotus/cases" });

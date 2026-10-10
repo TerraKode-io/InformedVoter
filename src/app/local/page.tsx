@@ -99,8 +99,9 @@ export default function LocalHubPage() {
             <form onSubmit={handleSearch} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-1">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
+                  <label htmlFor="local-search-city" className="block text-xs font-medium text-gray-600 mb-1">City</label>
                   <input
+                    id="local-search-city"
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
@@ -109,8 +110,9 @@ export default function LocalHubPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
+                  <label htmlFor="local-search-state" className="block text-xs font-medium text-gray-600 mb-1">State</label>
                   <select
+                    id="local-search-state"
                     value={stateAbbr}
                     onChange={(e) => setStateAbbr(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
@@ -124,8 +126,9 @@ export default function LocalHubPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Zip Code</label>
+                  <label htmlFor="local-search-zip" className="block text-xs font-medium text-gray-600 mb-1">Zip Code</label>
                   <input
+                    id="local-search-zip"
                     type="text"
                     value={zip}
                     onChange={(e) => setZip(e.target.value)}
@@ -388,38 +391,38 @@ function SubmitMeetingForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">City *</label>
-          <input required type="text" name="city" placeholder="City name"
+          <label htmlFor="submit-city" className="block text-xs font-medium text-gray-600 mb-1">City *</label>
+          <input id="submit-city" required type="text" name="city" placeholder="City name"
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">State *</label>
-          <input required type="text" name="state" placeholder="e.g. CA"
+          <label htmlFor="submit-state" className="block text-xs font-medium text-gray-600 mb-1">State *</label>
+          <input id="submit-state" required type="text" name="state" placeholder="e.g. CA"
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Meeting Date *</label>
-          <input required type="date" name="date"
+          <label htmlFor="submit-date" className="block text-xs font-medium text-gray-600 mb-1">Meeting Date *</label>
+          <input id="submit-date" required type="date" name="date"
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Meeting Time</label>
-          <input type="time" name="time"
+          <label htmlFor="submit-time" className="block text-xs font-medium text-gray-600 mb-1">Meeting Time</label>
+          <input id="submit-time" type="time" name="time"
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Location / Address *</label>
-          <input required type="text" name="location" placeholder="City Hall, 123 Main St"
+          <label htmlFor="submit-location" className="block text-xs font-medium text-gray-600 mb-1">Location / Address *</label>
+          <input id="submit-location" required type="text" name="location" placeholder="City Hall, 123 Main St"
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Agenda URL or Description</label>
-          <input type="text" name="agenda" placeholder="https://... or brief description"
+          <label htmlFor="submit-agenda" className="block text-xs font-medium text-gray-600 mb-1">Agenda URL or Description</label>
+          <input id="submit-agenda" type="text" name="agenda" placeholder="https://... or brief description"
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Your Email (optional, for updates)</label>
-          <input type="email" name="email" placeholder="you@example.com"
+          <label htmlFor="submit-email" className="block text-xs font-medium text-gray-600 mb-1">Your Email (optional, for updates)</label>
+          <input id="submit-email" type="email" name="email" placeholder="you@example.com"
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
         </div>
       </div>

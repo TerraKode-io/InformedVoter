@@ -22,6 +22,10 @@ export function sanitizeHtml(html: string): string {
       a: ["href", "rel", "class", "title"],
       "*": ["class"],
     },
+    // Explicitly restrict URI schemes so javascript:/data: links can never
+    // pass through, even for attributes added to the allowlist later (S-3).
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    allowedSchemesAppliedToAttributes: ["href"],
     disallowedTagsMode: "discard",
   });
 }

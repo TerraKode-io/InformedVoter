@@ -63,7 +63,6 @@ function normaliseLocation(loc: CivicLocation) {
 }
 
 export const GET = withErrorHandler(async (request: Request) => {
-  try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get("address")?.trim();
 
@@ -133,8 +132,4 @@ export const GET = withErrorHandler(async (request: Request) => {
       earlyVoteSites: (data.earlyVoteSites ?? []).map(normaliseLocation),
       dropOffLocations: (data.dropOffLocations ?? []).map(normaliseLocation),
     });
-  } catch (error) {
-    console.error("[polling-places] Unexpected error:", error);
-    return Response.json({ error: "Internal server error" }, { status: 500 });
-  }
 }, { route: "GET /api/polling-places" });

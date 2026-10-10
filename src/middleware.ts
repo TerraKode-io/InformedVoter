@@ -8,6 +8,16 @@ const PUBLIC_LIMIT    = 60;   // /api/search, /api/bills, etc.
 const PROTECTED_LIMIT = 300;  // /api/ai/* and /api/cron/*
 const WINDOW_SEC      = 60;
 
+// Only the configured site origin may call the API cross-origin (finding H-3).
+const ALLOWED_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "https://knowyourgov.us")
+      .origin;
+  } catch {
+    return "https://knowyourgov.us";
+  }
+})();
+
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
@@ -59,7 +69,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return new NextResponse(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+        "Vary": "Origin",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Max-Age": "86400",
@@ -76,9 +87,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     // Requires ALLOW_MANUAL_CRON=true explicitly set in .env.
     // NEVER set this in production.
     if (isCron && searchParams.get("manual") === "true") {
-      if (process.env.NODE_ENV === "production") {
+      // Aligned with the route handlers: manual triggers are DEV-ONLY.
+      if (process.env.NODE_ENV !== "development") {
         return NextResponse.json(
-          { error: "Manual trigger is disabled in production" },
+          { error: "Manual trigger is disabled outside development" },
           { status: 403 }
         );
       }
@@ -152,7 +164,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   // ── CORS headers for API routes ─────────────────────────────────────
   if (pathname.startsWith("/api/")) {
-    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+    response.headers.set("Vary", "Origin");
     response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }

@@ -10,6 +10,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    // Unit tests live under src/. Playwright E2E specs (e2e/, and the archived
+    // copy under documentation/security/**/e2e/) use @playwright/test and must
+    // not be collected by Vitest.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

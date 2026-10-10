@@ -232,7 +232,8 @@ export const GET = withCronErrorHandler(async (request: Request) => {
 
           sent++;
         } catch (err) {
-          console.error(`[send-digest] Error sending to ${sub.email}:`, err);
+          // Do not log subscriber email addresses (PII). Log an opaque id only.
+          console.error(`[send-digest] Error sending to subscriber id=${sub.id}:`, err);
           errors++;
         }
       }

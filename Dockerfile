@@ -15,7 +15,10 @@ RUN apk add --no-cache openssl libc6-compat
 
 # Copy dependency manifests first (better Docker layer caching)
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# Install ALL deps (including the pinned `prisma` devDependency) with scripts
+# disabled, so `npx prisma generate` below uses the same pinned CLI version
+# rather than fetching an unpinned one from the registry (finding H-4).
+RUN npm ci --ignore-scripts && npm cache clean --force
 
 # Copy Prisma schema and generate client BEFORE copying source
 # This layer is cached unless schema changes

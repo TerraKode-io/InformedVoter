@@ -28,10 +28,12 @@ const securityHeaders = [
       // NOTE: 'unsafe-inline' and 'unsafe-eval' are required for Next.js 16 runtime
       // (styled-jsx, fast refresh, etc.). Removing them will break the app.
       // For a stricter policy, implement CSP nonces via middleware.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.knowyourgov.us",
+      // static.cloudflareinsights.com is Cloudflare's auto-injected Web Analytics
+      // beacon; allowing it prevents CSP console violations (finding F-5).
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.knowyourgov.us https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://theunitedstates.io https://bioguide.congress.gov https://*.oyez.org",
-      "connect-src 'self' https://api.bigdatacloud.net https://ipapi.co https://api.usaspending.gov https://analytics.knowyourgov.us",
+      "connect-src 'self' https://api.bigdatacloud.net https://ipapi.co https://api.usaspending.gov https://analytics.knowyourgov.us https://cloudflareinsights.com",
       "font-src 'self'",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -43,6 +45,8 @@ const securityHeaders = [
 const nextConfig = {
   output: "standalone",
   productionBrowserSourceMaps: false,
+  // Do not advertise the framework via X-Powered-By (finding H-3).
+  poweredByHeader: false,
   async headers() {
     return [
       {
@@ -60,6 +64,15 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "bioguide.congress.gov",
+      },
+      // Member photos served from congress.gov (finding F-2).
+      {
+        protocol: "https",
+        hostname: "www.congress.gov",
+      },
+      {
+        protocol: "https",
+        hostname: "congress.gov",
       },
       {
         protocol: "https",

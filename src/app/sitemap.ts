@@ -4,6 +4,11 @@ import { FEDERAL_AGENCIES } from "@/lib/agencies";
 
 const BASE_URL = "https://knowyourgov.us";
 
+// The dynamic sections below query the database. This route must render at
+// request time (not statically during the Docker image build, which has no
+// DATABASE_URL) or those sections are permanently empty (finding F-3).
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Static pages ──
   const staticPages: MetadataRoute.Sitemap = [
