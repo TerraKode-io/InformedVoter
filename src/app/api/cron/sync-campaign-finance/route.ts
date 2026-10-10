@@ -241,7 +241,6 @@ function buildNameVariants(name: string): string[] {
       variants.push(parts[parts.length - 1]);
     }
   }
-  }
 
   // Deduplicate
   return [...new Set(variants)];
