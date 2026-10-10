@@ -14,6 +14,10 @@ import { withCronErrorHandler, ValidationError, NotFoundError, ExternalAPIError 
 
 const FEC_API_BASE = "https://api.open.fec.gov/v1";
 
+// FEC throttles bursts (~120 req/min per key). Keep a slow, steady cadence.
+const FEC_REQUEST_DELAY_MS = 550;
+const FEC_VARIANT_DELAY_MS = 250;
+
 // Process at most this many candidates per run to stay within the
 // OpenFEC rate limit of 1000 requests/hour (~3–4 calls per candidate).
 const DEFAULT_CANDIDATES_PER_RUN = 50;
@@ -208,6 +212,7 @@ async function findFecCandidateId(
   const nameVariants = buildNameVariants(name);
 
   for (const queryName of nameVariants) {
+    await delay(FEC_VARIANT_DELAY_MS);
     const result = await searchFecCandidate(queryName, officeCode, stateUpper);
     if (result) return result;
   }
@@ -841,6 +846,10 @@ export const GET = withCronErrorHandler(async (request: Request) => {
 
     for (let i = 0; i < filteredCandidates.length; i++) {
       const candidate = filteredCandidates[i];
+
+      // Pace requests: FEC throttles bursts (~120 req/min) and a swallowed 429
+      // surfaces as "no_fec_id", so keep the call rate comfortably below it.
+      await delay(FEC_REQUEST_DELAY_MS);
 
       try {
         const result = await syncCandidateFinance(candidate, CURRENT_CYCLE);
