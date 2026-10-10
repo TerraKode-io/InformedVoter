@@ -245,7 +245,8 @@ async function searchFecCandidate(
   officeCode: string,
   state: string
 ): Promise<string | null> {
-  // Try with current cycle first
+  // Broad search first. An election_year filter here excluded mid-term
+  // senators (their next election is in a different cycle), returning 0.
   const baseParams = {
     q: query,
     office: officeCode,
@@ -255,6 +256,23 @@ async function searchFecCandidate(
   };
 
   try {
+    const broad = await fecFetch<FecCandidateSearchResponse>(
+      buildFecUrl("/candidates/search/", baseParams)
+    );
+    const broadResults = broad.results ?? [];
+    if (broadResults.length > 0) {
+      // Prefer a candidate actively in the current cycle
+      const active = broadResults.find(
+        (r) =>
+          r.candidate_id &&
+          Array.isArray(r.cycles) &&
+          r.cycles.includes(CURRENT_CYCLE)
+      );
+      const pick = active ?? broadResults.find((r) => r.candidate_id);
+      return pick?.candidate_id ?? broadResults[0].candidate_id;
+    }
+
+    // Retry with the cycle filter (matches candidates running this cycle)
     const data = await fecFetch<FecCandidateSearchResponse>(
       buildFecUrl("/candidates/search/", {
         ...baseParams,
@@ -267,15 +285,6 @@ async function searchFecCandidate(
       // Prefer incumbent or active candidate
       const incumbent = results.find((r) => r.candidate_id);
       return incumbent?.candidate_id ?? results[0].candidate_id;
-    }
-
-    // Retry without cycle filter
-    const fallback = await fecFetch<FecCandidateSearchResponse>(
-      buildFecUrl("/candidates/search/", baseParams)
-    );
-    const fallbackResults = fallback.results ?? [];
-    if (fallbackResults.length > 0) {
-      return fallbackResults[0].candidate_id;
     }
   } catch {
     // Non-fatal — try next variant
