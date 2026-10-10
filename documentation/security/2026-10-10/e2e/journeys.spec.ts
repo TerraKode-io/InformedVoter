@@ -17,7 +17,7 @@ test.describe("selected-state cookie persistence", () => {
     await page.context().addCookies([
       { name: "selected-state", value: "CA", url: baseURL! },
     ]);
-    const console_ = collectConsole(page);
+    const console_ = await collectConsole(page);
     await gotoAndCheck(page, "/");
 
     const billsLink = page

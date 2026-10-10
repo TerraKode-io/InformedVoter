@@ -14,7 +14,7 @@ import {
 test.describe("route smoke", () => {
   for (const route of PUBLIC_ROUTES) {
     test(`renders ${route.name} (${route.path})`, async ({ page }) => {
-      const console_ = collectConsole(page);
+      const console_ = await collectConsole(page);
       await gotoAndCheck(page, route.path, route.status ?? 200);
 
       // Meaningful readiness signal: a non-empty <title>.
@@ -35,7 +35,7 @@ test.describe("route smoke", () => {
 test.describe("deep links & history", () => {
   for (const link of DEEP_LINKS) {
     test(`navigates ${link.from} -> ${link.to}`, async ({ page }) => {
-      const console_ = collectConsole(page);
+      const console_ = await collectConsole(page);
       await gotoAndCheck(page, link.from);
       await page.goto(link.to, { waitUntil: "domcontentloaded" });
       expect(page.url()).toContain(link.to);

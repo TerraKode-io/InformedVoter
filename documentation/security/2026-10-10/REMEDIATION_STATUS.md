@@ -1,9 +1,11 @@
 # Remediation Status — InformedVoter (2026-10-10)
 
-Fixes applied to the repository and verified. **Production has not been redeployed**, so the
-live site still exhibits the pre-fix behaviour until `iv-app` is rebuilt/redeployed.
+Fixes applied to the repository**, deployed to `iv-app`, and verified against the live site.
+As of the final pass the production E2E suite is fully green.
 
 ## Verification performed
+- **Live production E2E after deploy: 262 passed, 16 skipped, 0 failed** (Chromium, Firefox,
+  WebKit, Pixel 7, iPhone 14, + API project) against `https://knowyourgov.us`.
 - `npm test` (Vitest 5): **38/38 pass**, incl. 5 new tests proving F-1 maps validation to 400.
 - `npm run build` (Next 16.4.0): **success**; `/sitemap.xml` now `ƒ (Dynamic)`, `/search` builds.
 - `npm run lint` (ESLint 9 + flat config): **exit 0**.
@@ -25,7 +27,7 @@ live site still exhibits the pre-fix behaviour until `iv-app` is rebuilt/redeplo
 
 | ID | Fix applied | Verification | Status |
 |---|---|---|---|
-| S-1 | `next` 16.2.1 → **16.4.0** | prod audit clean; build + tests pass | Fixed (deploy pending) |
+| S-1 | `next` 16.2.1 → **16.4.0** | prod audit clean; build + tests pass | Fixed & deployed |
 | S-2 | `js-yaml@4.3.2`, `postcss@8.5.29`, `sanitize-html@2.18.0`, `@anthropic-ai/sdk@0.133.0`, `resend` | prod audit clean | Fixed |
 | S-3 | `sanitize.ts` explicit `allowedSchemes` + attr scoping; sanitizer upgraded | code + unit | Fixed |
 | S-4 | `sharp`/libvips via Next upgrade | prod audit clean | Fixed |
@@ -47,8 +49,8 @@ live site still exhibits the pre-fix behaviour until `iv-app` is rebuilt/redeplo
 | H-7 | Redis fail-open documented (by design) | — | Accepted |
 
 ## Residual / follow-ups
-- **Deploy required**: rebuild `iv-app` (`docker compose -f docker-compose.app.yml up -d --build`)
-  to make the fixes live, then re-run the suite from the server or workstation.
+- **Deployed** to `iv-app` (built `docker-compose.app.yml`, containers recreated); live
+  probes confirm F-1/F-2/F-3/F-5/F-8 and H-3 fixes are serving in production.
 - **Dev-only audit residual**: `eslint-config-next` (and transitive `braces`/`micromatch`/`fast-glob`)
   and `esbuild`/`vitest` advisories remain in devDependencies; they do not ship in the runtime image
   (`npm ci --omit=dev`). Accepted.
